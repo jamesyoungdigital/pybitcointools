@@ -100,6 +100,30 @@ def parse_addr_args(*args):
     return network, addr_args
 
 
+# Gets the unspent balance of one or more addresses
+def bci_unspent2(*args):
+    network, addrs = parse_addr_args(*args)
+    ret = []
+    for a in addrs:
+        try:
+            data = make_request('https://blockchain.info/rawaddr/'+a)
+        except Exception as e:
+            if str(e) == 'No free outputs to spend':
+                continue
+            else:
+                raise Exception(e)
+        try:
+            jsonobj = json.loads(data.decode("utf-8"))
+            ret.append({
+                "address" : jsonobj['address'],
+                "hash160" : jsonobj['hash160'],
+                "balance" : jsonobj['final_balance']
+                })
+        except:
+            # Exception raised here, FIXME
+            raise Exception("Failed to decode data: " + data)
+    return ret
+
 # Gets the unspent outputs of one or more addresses
 def bci_unspent(*args):
     network, addrs = parse_addr_args(*args)
@@ -186,13 +210,14 @@ def helloblock_unspent(*args):
 
 unspent_getters = {
     'bci': bci_unspent,
+    'bci2' : bci_unspent2,
     'blockr': blockr_unspent,
     'helloblock': helloblock_unspent
 }
 
 
 def unspent(*args, **kwargs):
-    f = unspent_getters.get(kwargs.get('source', ''), bci_unspent)
+    f = unspent_getters.get(kwargs.get('source', ''), bci_unspent2)
     return f(*args)
 
 
